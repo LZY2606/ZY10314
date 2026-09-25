@@ -144,9 +144,12 @@ class FileDict(BaseStorage):
             self._key2path(key).unlink()
 
     def __setitem__(self, key, value):
+        # Serialize before touching the file so an encoder failure can't leave behind an empty or
+        # truncated file (which would look like a valid index entry with a missing body)
+        content = self.serialize(value)
         with self._try_io(key):
             with self._key2path(key).open(mode='wb' if self.is_binary else 'w') as f:
-                f.write(self.serialize(value))
+                f.write(content)
 
     def __contains__(self, key) -> bool:
         with self._lock:
